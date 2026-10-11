@@ -18,6 +18,7 @@ const PUBLIC_URL = (
   process.env.PUBLIC_URL ||
   process.env.BASE_URL ||
   process.env.RENDER_EXTERNAL_URL ||
+  (process.env.RENDER_EXTERNAL_HOSTNAME ? 'https://' + process.env.RENDER_EXTERNAL_HOSTNAME : '') ||
   (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : '') ||
   (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') ||
   (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : '')
