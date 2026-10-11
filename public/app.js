@@ -1,6 +1,6 @@
 /* ============================================================
    校团委社会实践部 · 新生见面会系统  |  大屏管理端逻辑
-   Designed & Built by 张和浩 · 信息学院软件2402
+   制作人：张和浩 · 信息学院软件2402
    ============================================================ */
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -881,7 +881,7 @@ document.querySelector('[data-view="stats"]').addEventListener('click', () => se
 
 /* ------------------------------ 一点小彩蛋 ------------------------------ */
 console.log('%c✦ 校团委社会实践部 · 新生见面会系统', 'color:#ff2d4b;font-size:14px;font-weight:700');
-console.log('%cDesigned & Built by 张和浩 · 信息学院软件2402', 'color:#ffcf3f;font-size:12px');
+console.log('%c制作人：张和浩 · 信息学院软件2402', 'color:#ffcf3f;font-size:12px');
 
 /* 连点左上角 logo 5 次有惊喜 */
 let logoTap = 0, logoTapTimer = null;
@@ -895,7 +895,7 @@ if (logoEl) {
     if (logoTap >= 5) {
       logoTap = 0;
       confettiBurst();
-      toast('✨ 本系统由 <b>张和浩</b> 独立设计开发<br><span style="font-size:12px">信息学院 软件2402</span>', 4000);
+      toast('✨ 本系统制作人：<b>张和浩</b><br><span style="font-size:12px">信息学院 软件2402</span>', 4000);
     }
   });
 }

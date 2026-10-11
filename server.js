@@ -1,7 +1,7 @@
 /**
  * 校团委社会实践部 · 新生见面会系统
  * 零重依赖 HTTP 服务：静态资源 + 签到 API + SSE 实时推送 + CSV 导出 + 二维码
- * Designed & Built by 张和浩 · 信息学院软件2402
+ * 制作人：张和浩 · 信息学院软件2402
  */
 const http = require('http');
 const fs = require('fs');
