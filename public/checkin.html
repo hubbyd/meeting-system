@@ -20,7 +20,17 @@
     <div class="tagline">以 青 春 之 名 · 赴 热 爱 之 约</div>
   </div>
 
-  <!-- 签到表单 -->
+  <!-- 已签到快捷入口 -->
+  <div class="card" id="backCard" style="display:none">
+    <div class="card-body" style="display:flex;align-items:center;gap:12px;padding:16px 18px">
+      <div style="font-size:26px">👋</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700" id="backName">你已签到</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">进入你的专属主页，可发弹幕、看中奖</div>
+      </div>
+      <button class="btn btn-sm btn-gold" id="backGo">进入</button>
+    </div>
+  </div>
   <div class="card" id="formCard">
     <div class="card-head">
       <h2>📝 新生签到</h2>
@@ -70,19 +80,21 @@
         🎁 已解锁全部互动资格<br />
         请留意大屏，抽奖与盲盒马上开始
       </div>
-      <button class="btn btn-ghost" id="backBtn" style="margin-top:18px">返回（帮下一位同学签到）</button>
+      <button class="btn btn-primary btn-lg" id="goHomeBtn" style="width:100%;margin-top:18px">🎉 进入我的主页</button>
+      <button class="btn btn-ghost" id="backBtn" style="margin-top:10px">再帮一位同学签到</button>
     </div>
   </div>
 
   <div class="foot-note">
     校团委社会实践部 · 新生见面会系统<br />
-    技术支持：见面会互动平台
+    技术支持：信息学院软件2402张和浩
   </div>
 </div>
 
 <script>
 const DEPTS = ['社会实践部','计算机学院','经济管理学院','外国语学院','机械工程学院','文学院','理学院','艺术学院','法学院','医学院'];
 const $ = (id) => document.getElementById(id);
+let currentId = ''; // 当前签到人 id，用于跳转「我的主页」
 
 // 学院快捷选择
 const quick = $('deptQuick'), list = $('deptList');
@@ -139,15 +151,20 @@ submitBtn.onclick = async () => {
 };
 
 function showSuccess(p, dup) {
+  $('backCard').style.display = 'none';
   $('formCard').style.display = 'none';
   $('successCard').classList.add('show');
   $('ticketNo').textContent = String(p.no).padStart(3, '0');
   $('ticketName').textContent = p.name;
   $('ticketDept').textContent = p.dept;
   $('welcomeMsg').textContent = dup ? '你已经签到过啦，编号保持不变～' : '欢迎加入社会实践部大家庭';
+  try { localStorage.setItem('meetup_me', JSON.stringify({ id: p.id, name: p.name, no: p.no })); } catch (_) {}
+  currentId = p.id;
   window.scrollTo({ top: 0, behavior: 'smooth' });
   if (!dup) confettiBurst();
 }
+
+$('goHomeBtn').onclick = () => { if (currentId) location.href = '/student?id=' + encodeURIComponent(currentId); };
 
 $('backBtn').onclick = () => {
   $('name').value = ''; $('phone').value = ''; $('seat').value = ''; $('note').value = '';
@@ -196,6 +213,22 @@ function loop() {
 }
 
 $('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
+
+// 已签到过：顶部显示「进入我的主页」快捷入口
+(async function checkMine() {
+  let m = null;
+  try { m = JSON.parse(localStorage.getItem('meetup_me') || 'null'); } catch (_) {}
+  if (!m || !m.id) return;
+  try {
+    const s = await (await fetch('/api/state')).json();
+    const p = (s.participants || []).find((x) => x.id === m.id);
+    if (!p) return;
+    currentId = p.id;
+    $('backName').textContent = `${p.name} 同学，你已签到（第 ${p.no} 位）`;
+    $('backCard').style.display = '';
+    $('backGo').onclick = () => { location.href = '/student?id=' + encodeURIComponent(p.id); };
+  } catch (_) {}
+})();
 </script>
 </body>
 </html>
