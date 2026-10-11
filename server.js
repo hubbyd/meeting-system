@@ -10,9 +10,18 @@ const crypto = require('crypto');
 const QRCode = require('qrcode');
 
 const PORT = process.env.PORT || 3000;
-// 公网访问地址（内网穿透 / 云部署后设置），例如 PUBLIC_URL=https://xxx.trycloudflare.com
-// 设置后二维码将优先指向该公网 HTTPS 地址，任意网络的手机微信均可扫码签到
-const PUBLIC_URL = (process.env.PUBLIC_URL || process.env.BASE_URL || '').replace(/\/+$/, '');
+// 公网访问地址解析顺序（部署后自动识别，无需手动配置）：
+//   1) 手动指定 PUBLIC_URL / BASE_URL
+//   2) 云平台自动注入的环境变量（Render / Railway / Vercel / Fly 等）
+// 解析到后二维码将优先指向该公网 HTTPS 地址，任意网络的手机微信均可扫码签到
+const PUBLIC_URL = (
+  process.env.PUBLIC_URL ||
+  process.env.BASE_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  (process.env.RAILWAY_PUBLIC_DOMAIN ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN : '') ||
+  (process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : '') ||
+  (process.env.FLY_APP_NAME ? `https://${process.env.FLY_APP_NAME}.fly.dev` : '')
+).replace(/\/+$/, '');
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
