@@ -10,6 +10,9 @@ const crypto = require('crypto');
 const QRCode = require('qrcode');
 
 const PORT = process.env.PORT || 3000;
+// 公网访问地址（内网穿透 / 云部署后设置），例如 PUBLIC_URL=https://xxx.trycloudflare.com
+// 设置后二维码将优先指向该公网 HTTPS 地址，任意网络的手机微信均可扫码签到
+const PUBLIC_URL = (process.env.PUBLIC_URL || process.env.BASE_URL || '').replace(/\/+$/, '');
 const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
@@ -194,15 +197,20 @@ async function handleApi(req, res, url) {
     return true;
   }
 
-  // 局域网访问地址（供生成签到/弹幕二维码）
+  // 局域网 / 公网访问地址（供生成签到、弹幕二维码）
   if (pathname === '/api/net' && req.method === 'GET') {
     const ips = lanIPs();
     const hosts = ips.length ? ips : ['localhost'];
+    const bases = [
+      ...(PUBLIC_URL ? [PUBLIC_URL] : []),
+      ...hosts.map((ip) => `http://${ip}:${PORT}`),
+    ];
     sendJSON(res, 200, {
       port: PORT,
+      publicUrl: PUBLIC_URL || null,
       hosts,
-      urls: hosts.map((ip) => `http://${ip}:${PORT}/checkin`),
-      danmu: hosts.map((ip) => `http://${ip}:${PORT}/danmu`),
+      urls: bases.map((b) => `${b}/checkin`),
+      danmu: bases.map((b) => `${b}/danmu`),
     });
     return true;
   }
@@ -479,14 +487,21 @@ function serveStatic(req, res, url) {
 /* ---------------------------------- 启动 ---------------------------------- */
 
 function lanIPs() {
-  const out = [];
+  const found = [];
   const nets = os.networkInterfaces();
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
-      if (net.family === 'IPv4' && !net.internal) out.push(net.address);
+      if (net.family === 'IPv4' && !net.internal) found.push({ name, address: net.address });
     }
   }
-  return out;
+  const isPrivate = (ip) =>
+    /^192\.168\./.test(ip) || /^10\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip);
+  // 虚拟网卡（WSL / VirtualBox / VMware / Docker 等）排名靠后，避免二维码指向手机连不上的地址
+  const isVirtual = (name) =>
+    /virtual|vmware|vbox|virtualbox|hyper-?v|wsl|docker|vethernet|tap|tun|bluetooth|zerotier|tailscale|radmin|loopback/i.test(name);
+  const score = (x) => (isPrivate(x.address) ? 0 : 2) + (isVirtual(x.name) ? 1 : 0);
+  found.sort((a, b) => score(a) - score(b));
+  return found.map((x) => x.address);
 }
 
 loadState();
@@ -517,7 +532,12 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('  ║   校团委社会实践部 · 新生见面会系统 已启动 🎉      ║');
   console.log('  ╚══════════════════════════════════════════════════╝\n');
   console.log(`  大屏管理端 :  http://localhost:${PORT}/`);
-  ips.forEach((ip) => console.log(`  手机签到页 :  http://${ip}:${PORT}/checkin   (扫码入口)`));
+  if (PUBLIC_URL) {
+    console.log(`  公网签到页 :  ${PUBLIC_URL}/checkin   (二维码默认地址 ✅)`);
+    console.log(`  公网弹幕页 :  ${PUBLIC_URL}/danmu`);
+  }
+  ips.forEach((ip) => console.log(`  内网签到页 :  http://${ip}:${PORT}/checkin   (需同一 WiFi)`));
   if (!ips.length) console.log(`  手机签到页 :  http://localhost:${PORT}/checkin`);
+  if (!PUBLIC_URL) console.log(`  ⚠️  未设置 PUBLIC_URL，二维码仅同一 WiFi 可扫；跨网/微信建议用内网穿透后设置`);
   console.log(`  数据导出   :  http://localhost:${PORT}/api/export.csv\n`);
 });
