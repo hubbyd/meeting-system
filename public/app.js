@@ -430,6 +430,15 @@ $('punishClear').onclick = async () => {
   toast('已清空转动记录');
 };
 
+/* 互动次数清零：清空全部互动记录（抽奖 / 盲盒 / 惩罚 / 数字炸弹） */
+$('playClear').onclick = async () => {
+  const n = S.records.length;
+  if (!n) return toast('互动次数已经是 0 啦');
+  if (!confirm(`确定要将「互动次数」清零吗？\n\n将删除全部 ${n} 条互动记录（抽奖 / 盲盒 / 惩罚 / 数字炸弹），\n「最新动态」中的互动项、「中奖名单」与「转动记录」会一并清空。\n\n此操作不可撤销。`)) return;
+  for (const r of S.records.slice()) await api('DELETE', '/api/records?id=' + r.id);
+  toast(`✅ 互动次数已清零（清除 ${n} 条记录）`);
+};
+
 /* ================================ 游戏逻辑 ================================ */
 let bomb = { lo: 1, hi: 100, secret: null, guesses: [] };
 function renderBomb() {

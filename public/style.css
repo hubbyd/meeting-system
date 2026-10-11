@@ -288,6 +288,14 @@ select option { background: #15151d; }
   background: linear-gradient(120deg, #fff, var(--red-soft)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .stat.accent .v { background: var(--rainbow); background-size: 200%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: slide 6s linear infinite; }
 
+.stat-mini {
+  position: absolute; top: 10px; right: 10px;
+  padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 600;
+  color: var(--muted); background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--panel-brd); cursor: pointer; transition: all .2s;
+}
+.stat-mini:hover { color: #fff; background: rgba(255, 45, 75, .22); border-color: rgba(255, 45, 75, .5); }
+
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
