@@ -280,10 +280,11 @@
           </div>
         </div>
 
-        <!-- 积分排行榜 -->
+        <!-- 个人积分榜 -->
         <div class="card">
-          <div class="card-head"><h2>🏅 抢答积分榜</h2><div class="spacer" style="flex:1"></div>
-            <button class="btn btn-sm btn-ghost" id="scoreReset">清零</button></div>
+          <div class="card-head"><h2>🏅 积分榜</h2><div class="spacer" style="flex:1"></div>
+            <span class="badge cyan">按个人积分</span>
+            <button class="btn btn-sm btn-ghost" id="scoreReset" style="margin-left:8px">清零</button></div>
           <div class="card-body" style="flex:1;min-height:0">
             <div style="display:flex;gap:8px;margin-bottom:10px">
               <input id="scoreName" list="pplList" placeholder="选择/输入同学姓名" autocomplete="off" />
@@ -296,6 +297,15 @@
               <span class="chip" data-sd="-1">-1 分</span>
             </div>
             <div class="scroll" id="rankList" style="flex:1;min-height:110px"></div>
+          </div>
+        </div>
+
+        <!-- 学院战队榜 -->
+        <div class="card">
+          <div class="card-head"><h2>🏫 学院战队榜</h2><div class="spacer" style="flex:1"></div>
+            <span class="badge cyan">按学院总分</span></div>
+          <div class="card-body" style="flex:1;min-height:0">
+            <div class="scroll" id="teamRankList" style="flex:1;min-height:110px"></div>
           </div>
         </div>
 

@@ -311,6 +311,7 @@ function renderAll() {
   renderMeta(); renderWall(); renderFeed(); renderTopStats(); renderTable();
   renderLotTiers(); renderWinList(); renderBoxes(); buildWheel(); renderPunishList(); renderPunishHistory();
   renderRankList();
+  renderTeamRank();
   danmuTotal = (S.danmu || []).length;
   updateDanmuCount();
   if ($('view-stats').classList.contains('active')) renderStats();
@@ -606,6 +607,30 @@ function renderRankList() {
         <div style="color:var(--muted);font-size:12px">${esc(p.dept)}</div></div>
       <div class="rank-score">${p.score}</div>
     </div>`).join('') : '<div class="empty">还没有同学得分，抢答后给 TA 加分吧</div>';
+}
+
+/* 学院战队榜：按学院聚合全部同学积分 */
+function teamScores() {
+  const map = {};
+  for (const p of S.participants) {
+    const d = p.dept || '未填写';
+    if (!map[d]) map[d] = { dept: d, total: 0, count: 0 };
+    map[d].total += Number(p.score) || 0;
+    map[d].count++;
+  }
+  return Object.values(map).sort((a, b) => b.total - a.total || b.count - a.count);
+}
+function renderTeamRank() {
+  const list = teamScores();
+  $('teamRankList').innerHTML = list.length ? list.map((t, i) => `
+    <div class="rank-item team-item ${i === 0 ? 'team-g1' : ''}">
+      <div class="rank-no ${i === 0 ? 'g1' : i === 1 ? 'g2' : i === 2 ? 'g3' : ''}">${i + 1}</div>
+      <div style="min-width:0">
+        <div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(t.dept)}</div>
+        <div style="color:var(--muted);font-size:12px">${t.count} 人 · 人均 ${(t.count ? (t.total / t.count) : 0).toFixed(1)} 分</div>
+      </div>
+      <div class="rank-score">${t.total}<span style="font-size:12px;color:var(--muted);margin-left:2px">分</span></div>
+    </div>`).join('') : '<div class="empty">还没有学院数据，先让同学们签到吧</div>';
 }
 async function addScore(name, delta) {
   name = (name || '').trim();

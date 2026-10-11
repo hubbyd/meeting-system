@@ -599,6 +599,15 @@ body.checkin {
 .rank-no.g3 { background: linear-gradient(135deg, #e0965a, #a85f2a); }
 .rank-score { margin-left: auto; font-weight: 900; font-size: 19px; color: var(--gold); font-variant-numeric: tabular-nums; }
 
+/* 学院战队榜 */
+.team-item.team-g1 {
+  background: linear-gradient(90deg, rgba(255, 207, 63, .16), rgba(255, 122, 24, .06));
+  border-color: rgba(255, 207, 63, .5);
+  box-shadow: 0 0 0 1px rgba(255, 207, 63, .12), var(--glow-gold);
+}
+.team-item .rank-score { color: #fff; }
+.team-item.team-g1 .rank-score { color: var(--gold); }
+
 /* 你演我猜 */
 .word-card {
   font-size: clamp(40px, 6vw, 84px);
