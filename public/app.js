@@ -314,6 +314,7 @@ function renderAll() {
   updateDanmuCount();
   if ($('view-stats').classList.contains('active')) renderStats();
   else pendingStats = true;
+  snapshotLocal(S);
 }
 let pendingStats = false;
 
@@ -772,6 +773,70 @@ $('danmuTest').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('da
 $('danmuClear').onclick = async () => { await api('DELETE', '/api/danmu'); toast('弹幕已清屏'); };
 document.querySelector('[data-view="danmu"]').addEventListener('click', () => setTimeout(() => { fitBoard(); replayDanmu(); }, 30));
 
+/* ================================ 数据备份 ================================ */
+const SNAP_KEY = 'meetup_backup';
+let lastSnapAt = 0;
+
+function fmtDateTime(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/* 把最新状态镜像到浏览器本地，服务器重启后可一键恢复 */
+function snapshotLocal(s) {
+  const now = Date.now();
+  if (now - lastSnapAt < 5000) return;
+  lastSnapAt = now;
+  try { localStorage.setItem(SNAP_KEY, JSON.stringify({ at: now, state: s })); } catch (_) {}
+  const el = $('bkLocal');
+  if (el) el.textContent = fmtDateTime(now);
+}
+
+async function updateBkTime() {
+  try {
+    const r = await api('GET', '/api/backups');
+    const b = (r.backups || [])[0];
+    const el = $('bkServer');
+    if (el) el.textContent = b ? fmtDateTime(b.at) : '--';
+  } catch (_) {}
+}
+
+$('bkNow').onclick = async () => {
+  const r = await api('POST', '/api/backup');
+  toast(r.ok ? `💾 已备份到服务器<br><span style="font-size:12px">${esc(r.name || '')}</span>` : '备份失败');
+  updateBkTime();
+};
+
+$('bkDownload').onclick = () => { window.location.href = '/api/backup'; };
+
+$('bkRestoreLocal').onclick = async () => {
+  let snap = null;
+  try { snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); } catch (_) {}
+  if (!snap || !snap.state) return toast('本机暂无快照');
+  const n = (snap.state.participants || []).length;
+  if (!confirm(`确认用本机快照（${fmtDateTime(snap.at)}，${n} 人签到）覆盖当前数据？`)) return;
+  const r = await api('POST', '/api/restore', snap.state);
+  toast(r.ok ? `♻️ 已从本机恢复 ${r.participants} 人` : '恢复失败');
+  updateBkTime();
+};
+
+$('bkFile').onchange = async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    const n = ((data.state || data).participants || []).length;
+    if (!confirm(`确认用「${f.name}」（${n} 人签到）覆盖当前数据？`)) return;
+    const r = await api('POST', '/api/restore', data);
+    toast(r.ok ? `♻️ 已导入恢复 ${r.participants} 人` : '恢复失败');
+    updateBkTime();
+  } catch (_) {
+    toast('文件解析失败，请选择导出的备份 JSON');
+  }
+};
+
 /* ================================ 实时连接 ================================ */
 function connectSSE() {
   const es = new EventSource('/api/stream');
@@ -806,4 +871,9 @@ document.querySelector('[data-view="stats"]').addEventListener('click', () => se
   loadQR();
   connectSSE();
   setTimeout(fitBoard, 60);
+  updateBkTime();
+  try {
+    const snap = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null');
+    if (snap && snap.at) $('bkLocal').textContent = fmtDateTime(snap.at);
+  } catch (_) {}
 })();

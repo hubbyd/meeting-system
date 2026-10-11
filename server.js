@@ -27,6 +27,8 @@ const ROOT = __dirname;
 const PUBLIC_DIR = path.join(ROOT, 'public');
 const DATA_DIR = path.join(ROOT, 'data');
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const BACKUP_DIR = path.join(DATA_DIR, 'backups');
+const BACKUP_KEEP = 30; // 最多保留最近 30 份自动备份
 
 /* ---------------------------------- 状态 ---------------------------------- */
 
@@ -111,10 +113,87 @@ function persist() {
     try {
       fs.mkdirSync(DATA_DIR, { recursive: true });
       fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
+      scheduleBackup();
     } catch (e) {
       console.error('写入存档失败：', e.message);
     }
   }, 150);
+}
+
+/* -------------------------------- 数据备份 -------------------------------- */
+/* 数据变更后自动生成带时间戳的快照，滚动保留最近 BACKUP_KEEP 份 */
+
+let backupTimer = null;
+let lastBackupAt = 0;
+const BACKUP_MIN_INTERVAL = 15000; // 自动备份最小间隔，避免高频写盘
+
+function backupName(ts) {
+  const d = new Date(ts);
+  const p = (n) => String(n).padStart(2, '0');
+  return `state-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.json`;
+}
+
+function listBackups() {
+  try {
+    return fs.readdirSync(BACKUP_DIR)
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => {
+        const st = fs.statSync(path.join(BACKUP_DIR, f));
+        const ppl = (() => {
+          try { return (JSON.parse(fs.readFileSync(path.join(BACKUP_DIR, f), 'utf8')).participants || []).length; } catch (_) { return 0; }
+        })();
+        return { name: f, size: st.size, at: st.mtimeMs, participants: ppl };
+      })
+      .sort((a, b) => b.at - a.at);
+  } catch (_) {
+    return [];
+  }
+}
+
+function pruneBackups() {
+  try {
+    const files = fs.readdirSync(BACKUP_DIR).filter((f) => f.endsWith('.json')).sort();
+    while (files.length > BACKUP_KEEP) {
+      const f = files.shift();
+      try { fs.unlinkSync(path.join(BACKUP_DIR, f)); } catch (_) {}
+    }
+  } catch (_) {}
+}
+
+function writeBackup(force) {
+  const now = Date.now();
+  if (!force && now - lastBackupAt < BACKUP_MIN_INTERVAL) return null;
+  try {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    const name = backupName(now);
+    fs.writeFileSync(path.join(BACKUP_DIR, name), JSON.stringify(state, null, 2));
+    lastBackupAt = now;
+    pruneBackups();
+    return name;
+  } catch (e) {
+    console.error('写入备份失败：', e.message);
+    return null;
+  }
+}
+
+function scheduleBackup() {
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(() => writeBackup(false), 2000);
+}
+
+/* 用外部数据覆盖当前状态（恢复备份 / 导入） */
+function applyState(data) {
+  if (!data || typeof data !== 'object') return false;
+  state = Object.assign(defaultState(), data);
+  state.settings = Object.assign(defaultState().settings, data.settings || {});
+  state.blindbox = data.blindbox || { opened: {} };
+  if (!Array.isArray(state.participants)) state.participants = [];
+  if (!Array.isArray(state.records)) state.records = [];
+  if (!Array.isArray(state.danmu)) state.danmu = [];
+  persist();
+  writeBackup(true);
+  pushState();
+  return true;
 }
 
 /* --------------------------------- SSE 推送 -------------------------------- */
@@ -240,6 +319,57 @@ async function handleApi(req, res, url) {
     } catch (e) {
       sendJSON(res, 500, { error: e.message });
     }
+    return true;
+  }
+
+  // 备份列表
+  if (pathname === '/api/backups' && req.method === 'GET') {
+    sendJSON(res, 200, { backups: listBackups(), keep: BACKUP_KEEP });
+    return true;
+  }
+
+  // 立即备份
+  if (pathname === '/api/backup' && req.method === 'POST') {
+    const name = writeBackup(true);
+    sendJSON(res, 200, { ok: !!name, name, backups: listBackups() });
+    return true;
+  }
+
+  // 下载备份（默认导出当前数据；?name= 导出指定历史备份）
+  if (pathname === '/api/backup' && req.method === 'GET') {
+    const name = url.searchParams.get('name');
+    let body, filename;
+    if (name) {
+      const safe = path.basename(name);
+      const fp = path.join(BACKUP_DIR, safe);
+      if (!fs.existsSync(fp)) {
+        sendJSON(res, 404, { error: '备份不存在' });
+        return true;
+      }
+      body = fs.readFileSync(fp);
+      filename = safe;
+    } else {
+      body = Buffer.from(JSON.stringify(state, null, 2));
+      filename = backupName(Date.now());
+    }
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${filename}"`,
+      'Access-Control-Allow-Origin': '*',
+    });
+    res.end(body);
+    return true;
+  }
+
+  // 恢复备份 / 导入数据
+  if (pathname === '/api/restore' && req.method === 'POST') {
+    const body = await readBody(req);
+    const data = body && body.state ? body.state : body;
+    if (!applyState(data)) {
+      sendJSON(res, 400, { error: '数据格式不正确' });
+      return true;
+    }
+    sendJSON(res, 200, { ok: true, participants: state.participants.length });
     return true;
   }
 
@@ -516,6 +646,20 @@ function lanIPs() {
 
 loadState();
 
+/* 磁盘/容器重置后：主存档缺失但存在历史备份时，自动恢复最新一份 */
+(function restoreBackupOnBoot() {
+  if (fs.existsSync(STATE_FILE)) return;
+  const list = listBackups();
+  if (!list.length) return;
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(BACKUP_DIR, list[0].name), 'utf8'));
+    applyState(raw);
+    console.log(`  ♻️  主存档缺失，已自动从备份恢复：${list[0].name}（${state.participants.length} 人签到）`);
+  } catch (e) {
+    console.error('自动恢复备份失败：', e.message);
+  }
+})();
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   if (req.method === 'OPTIONS') {
@@ -549,5 +693,6 @@ server.listen(PORT, '0.0.0.0', () => {
   ips.forEach((ip) => console.log(`  内网签到页 :  http://${ip}:${PORT}/checkin   (需同一 WiFi)`));
   if (!ips.length) console.log(`  手机签到页 :  http://localhost:${PORT}/checkin`);
   if (!PUBLIC_URL) console.log(`  ⚠️  未设置 PUBLIC_URL，二维码仅同一 WiFi 可扫；跨网/微信建议用内网穿透后设置`);
-  console.log(`  数据导出   :  http://localhost:${PORT}/api/export.csv\n`);
+  console.log(`  数据导出   :  http://localhost:${PORT}/api/export.csv`);
+  console.log(`  自动备份   :  data/backups/（保留最近 ${BACKUP_KEEP} 份，重启自动恢复）\n`);
 });

@@ -109,6 +109,19 @@
               <button class="btn btn-sm" id="copyUrlBtn" style="margin-top:10px;width:100%">📋 复制签到链接</button>
             </div>
           </div>
+          <div class="card">
+            <div class="card-head"><h2>💾 数据备份</h2></div>
+            <div class="card-body" style="font-size:12px;color:var(--muted);line-height:1.8">
+              服务器最近备份：<b id="bkServer" style="color:var(--gold)">--</b><br />
+              本机快照：<b id="bkLocal" style="color:var(--neon,#22d3ee)">--</b>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <button class="btn btn-sm" id="bkNow">立即备份</button>
+                <button class="btn btn-sm btn-gold" id="bkDownload">下载备份</button>
+                <button class="btn btn-sm" id="bkRestoreLocal">从本机恢复</button>
+                <label class="btn btn-sm" style="cursor:pointer">导入文件<input type="file" id="bkFile" accept=".json,application/json" style="display:none" /></label>
+              </div>
+            </div>
+          </div>
           <div class="card" style="flex:1">
             <div class="card-head"><h2>💡 现场引导</h2></div>
             <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.9">
