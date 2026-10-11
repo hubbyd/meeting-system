@@ -316,7 +316,12 @@ select option { background: #15151d; }
 
 /* ------------------------------- 签到墙 ------------------------------- */
 .wall-layout { display: grid; grid-template-columns: 1fr 340px; gap: 18px; height: 100%; }
-.wall-main { display: flex; flex-direction: column; min-height: 0; }
+.wall-main { display: flex; flex-direction: column; gap: 18px; min-height: 0; }
+
+/* 签到墙主视图 · 底部实时榜单 */
+.wall-boards { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; height: 232px; flex: 0 0 auto; }
+.wall-boards > .card { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.wall-board-list { flex: 1; min-height: 0; overflow: auto; padding: 12px 14px; }
 
 .wall-grid {
   flex: 1; min-height: 0; overflow: auto;
@@ -571,6 +576,10 @@ body.checkin {
   .lottery-layout > .stage, .lottery-layout > .lottery-controls { min-height: 0; }
   .side-stack, .lottery-controls { min-height: 640px; }
   .side-stack > .card, .lottery-controls > .card { flex: 0 0 auto; }
+  .wall-main > .card:first-child { min-height: 340px; }
+  .wall-boards { height: auto; }
+  .wall-boards > .card { min-height: 200px; }
+  .wall-board-list { max-height: 220px; }
 }
 
 /* ============================== 互动游戏 · 卡片墙 ============================== */

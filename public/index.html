@@ -71,6 +71,16 @@
               <div class="empty"><span class="big">🎈</span>还没有同学签到，快展示签到二维码吧</div>
             </div>
           </div>
+          <div class="wall-boards">
+            <div class="card">
+              <div class="card-head"><h2>🏅 实时积分榜</h2><div class="spacer" style="flex:1"></div><span class="badge cyan">前 8 名</span></div>
+              <div class="scroll wall-board-list" id="wallRankList"><div class="empty">还没有同学得分</div></div>
+            </div>
+            <div class="card">
+              <div class="card-head"><h2>🏫 学院战队榜</h2><div class="spacer" style="flex:1"></div><span class="badge cyan">按学院总分</span></div>
+              <div class="scroll wall-board-list" id="wallTeamList"><div class="empty">还没有学院数据</div></div>
+            </div>
+          </div>
         </div>
         <div class="side-stack">
           <div class="stat-row" style="grid-template-columns:1fr 1fr">
@@ -297,15 +307,6 @@
               <span class="chip" data-sd="-1">-1 分</span>
             </div>
             <div class="scroll" id="rankList" style="flex:1;min-height:110px"></div>
-          </div>
-        </div>
-
-        <!-- 学院战队榜 -->
-        <div class="card">
-          <div class="card-head"><h2>🏫 学院战队榜</h2><div class="spacer" style="flex:1"></div>
-            <span class="badge cyan">按学院总分</span></div>
-          <div class="card-body" style="flex:1;min-height:0">
-            <div class="scroll" id="teamRankList" style="flex:1;min-height:110px"></div>
           </div>
         </div>
 
