@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#08080c" />
+<title>新生见面会 · 扫码签到</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="checkin">
+<div class="aurora"></div>
+<div class="grid-overlay"></div>
+<canvas id="confetti"></canvas>
+
+<div class="checkin-wrap">
+  <div class="hero">
+    <div class="logo-big">社</div>
+    <h1>校团委社会实践部</h1>
+    <p>2026 级新生见面会 · 欢迎你的到来</p>
+    <div class="tagline">以 青 春 之 名 · 赴 热 爱 之 约</div>
+  </div>
+
+  <!-- 签到表单 -->
+  <div class="card" id="formCard">
+    <div class="card-head">
+      <h2>📝 新生签到</h2>
+      <span class="hint" id="liveCount">已签到 0 人</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>姓名 <span style="color:var(--red)">*</span></label>
+        <input id="name" type="text" placeholder="请输入你的姓名" maxlength="12" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>学院 / 部门</label>
+        <div class="dept-quick" id="deptQuick"></div>
+        <input id="dept" list="deptList" type="text" placeholder="选择或输入你的学院" maxlength="20" style="margin-top:10px" autocomplete="off" />
+        <datalist id="deptList"></datalist>
+      </div>
+      <div class="field">
+        <label>联系电话（选填，用于活动通知）</label>
+        <input id="phone" type="tel" placeholder="选填" maxlength="20" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>座位号 / 抽奖编号（选填）</label>
+        <input id="seat" type="text" placeholder="如 A区12号，选填" maxlength="20" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>想对新学期说的话（选填）</label>
+        <textarea id="note" rows="2" placeholder="一句话立个 flag，会出现在大屏上哦～" maxlength="60"></textarea>
+      </div>
+      <button class="btn btn-primary btn-lg" id="submitBtn" style="width:100%;margin-top:6px">✨ 立即签到</button>
+      <div class="foot-note">签到后即可参与抽奖、盲盒、互动游戏</div>
+    </div>
+  </div>
+
+  <!-- 签到成功 -->
+  <div class="card success" id="successCard">
+    <div class="card-body">
+      <div class="check-badge">✅</div>
+      <h2 style="margin:0 0 6px;font-size:22px">签到成功！</h2>
+      <p style="color:var(--muted);margin:0" id="welcomeMsg">欢迎加入社会实践部大家庭</p>
+      <div class="ticket">
+        <div class="lbl">你 的 签 到 编 号</div>
+        <div class="no-big" id="ticketNo">--</div>
+        <div style="margin-top:12px;font-size:15px" id="ticketName"></div>
+        <div style="color:var(--muted);font-size:13px;margin-top:4px" id="ticketDept"></div>
+      </div>
+      <div style="font-size:14px;color:var(--muted);line-height:1.7">
+        🎁 已解锁全部互动资格<br />
+        请留意大屏，抽奖与盲盒马上开始
+      </div>
+      <button class="btn btn-ghost" id="backBtn" style="margin-top:18px">返回（帮下一位同学签到）</button>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    校团委社会实践部 · 新生见面会系统<br />
+    技术支持：见面会互动平台
+  </div>
+</div>
+
+<script>
+const DEPTS = ['社会实践部','计算机学院','经济管理学院','外国语学院','机械工程学院','文学院','理学院','艺术学院','法学院','医学院'];
+const $ = (id) => document.getElementById(id);
+
+// 学院快捷选择
+const quick = $('deptQuick'), list = $('deptList');
+DEPTS.forEach((d) => {
+  const c = document.createElement('div');
+  c.className = 'chip'; c.textContent = d;
+  c.onclick = () => {
+    $('dept').value = d;
+    [...quick.children].forEach((x) => x.classList.toggle('on', x === c));
+  };
+  quick.appendChild(c);
+  const o = document.createElement('option'); o.value = d; list.appendChild(o);
+});
+['其他 / 自由填写'].forEach((d) => {
+  const c = document.createElement('div');
+  c.className = 'chip'; c.textContent = d;
+  c.onclick = () => { $('dept').value = ''; $('dept').focus();
+    [...quick.children].forEach((x) => x.classList.toggle('on', x === c)); };
+  quick.appendChild(c);
+});
+
+// 实时签到人数
+async function refreshCount() {
+  try {
+    const s = await (await fetch('/api/state')).json();
+    $('liveCount').textContent = `已签到 ${s.participants.length} 人`;
+  } catch (_) {}
+}
+refreshCount();
+setInterval(refreshCount, 8000);
+
+// 提交
+const submitBtn = $('submitBtn');
+submitBtn.onclick = async () => {
+  const name = $('name').value.trim();
+  if (!name) { $('name').focus(); toast('请先填写姓名哦～'); return; }
+  submitBtn.disabled = true; submitBtn.textContent = '签到中…';
+  try {
+    const res = await fetch('/api/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name, dept: $('dept').value.trim(), phone: $('phone').value.trim(),
+        seat: $('seat').value.trim(), note: $('note').value.trim(),
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '签到失败');
+    showSuccess(data.participant, data.duplicate);
+  } catch (e) {
+    toast('签到失败：' + e.message);
+    submitBtn.disabled = false; submitBtn.textContent = '✨ 立即签到';
+  }
+};
+
+function showSuccess(p, dup) {
+  $('formCard').style.display = 'none';
+  $('successCard').classList.add('show');
+  $('ticketNo').textContent = String(p.no).padStart(3, '0');
+  $('ticketName').textContent = p.name;
+  $('ticketDept').textContent = p.dept;
+  $('welcomeMsg').textContent = dup ? '你已经签到过啦，编号保持不变～' : '欢迎加入社会实践部大家庭';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (!dup) confettiBurst();
+}
+
+$('backBtn').onclick = () => {
+  $('name').value = ''; $('phone').value = ''; $('seat').value = ''; $('note').value = '';
+  [...quick.children].forEach((x) => x.classList.remove('on'));
+  $('successCard').classList.remove('show');
+  $('formCard').style.display = '';
+  submitBtn.disabled = false; submitBtn.textContent = '✨ 立即签到';
+  refreshCount();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// 轻提示
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99;text-align:center';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.classList.add('fade'); setTimeout(() => t.remove(), 400); }, 1600);
+}
+
+// 彩带
+const cv = document.getElementById('confetti'), cx = cv.getContext('2d');
+let parts = [], raf = null;
+function sizeCv() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', sizeCv); sizeCv();
+function confettiBurst() {
+  const colors = ['#ff2d4b','#ff7a18','#ffcf3f','#22d3ee','#a855f7','#34d399'];
+  for (let i = 0; i < 130; i++) {
+    parts.push({ x: innerWidth / 2, y: innerHeight * 0.35,
+      vx: (Math.random() - .5) * 14, vy: Math.random() * -14 - 4,
+      s: Math.random() * 8 + 5, c: colors[(Math.random() * colors.length) | 0],
+      r: Math.random() * Math.PI, vr: (Math.random() - .5) * .3, life: 130 });
+  }
+  if (!raf) loop();
+}
+function loop() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach((p) => {
+    p.vy += 0.42; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life--;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+    cx.globalAlpha = Math.max(0, p.life / 130); cx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); cx.restore();
+  });
+  parts = parts.filter((p) => p.life > 0 && p.y < cv.height + 40);
+  if (parts.length) raf = requestAnimationFrame(loop); else { raf = null; cx.clearRect(0, 0, cv.width, cv.height); }
+}
+
+$('name').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitBtn.click(); });
+</script>
+</body>
+</html>

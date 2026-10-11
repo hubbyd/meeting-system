@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>新生见面会 · 大屏管理端</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div class="aurora"></div>
+<div class="grid-overlay"></div>
+<canvas id="confetti"></canvas>
+<div class="toasts" id="toasts"></div>
+
+<div class="app">
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">社</div>
+      <div class="titles">
+        <h1 id="appTitle">校团委社会实践部 · 新生见面会</h1>
+        <div class="sub" id="appSubtitle">以青春之名，赴一场热爱之约</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="live-dot"><i></i><span>实时在线</span></div>
+    <div class="clock"><b id="clock">--:--:--</b></div>
+    <button class="btn btn-sm btn-ghost" id="settingsBtn">⚙️ 设置</button>
+  </header>
+
+  <!-- 标签 -->
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-view="wall"><span class="ico">🧱</span>签到墙</button>
+    <button class="tab" data-view="manage"><span class="ico">📋</span>签到管理</button>
+    <button class="tab" data-view="lottery"><span class="ico">🎁</span>抽奖</button>
+    <button class="tab" data-view="box"><span class="ico">📦</span>盲盒</button>
+    <button class="tab" data-view="punish"><span class="ico">🎯</span>惩罚转盘</button>
+    <button class="tab" data-view="games"><span class="ico">🎮</span>互动游戏</button>
+    <button class="tab" data-view="danmu"><span class="ico">💬</span>弹幕墙</button>
+    <button class="tab" data-view="stats"><span class="ico">📊</span>数据统计</button>
+  </nav>
+
+  <main class="main">
+    <!-- ============ 签到墙 ============ -->
+    <section class="view active" id="view-wall">
+      <div class="wall-layout">
+        <div class="wall-main">
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head">
+              <h2>🧱 实时签到墙</h2>
+              <span class="hint">同学签到后自动出现在这里</span>
+              <div class="spacer" style="flex:1"></div>
+              <span class="badge" id="wallCountBadge">0 人已签到</span>
+            </div>
+            <div class="wall-grid" id="wallGrid">
+              <div class="empty"><span class="big">🎈</span>还没有同学签到，快展示签到二维码吧</div>
+            </div>
+          </div>
+        </div>
+        <div class="side-stack">
+          <div class="stat-row" style="grid-template-columns:1fr 1fr">
+            <div class="stat accent"><div class="k">已签到</div><div class="v" id="sTotal">0</div></div>
+            <div class="stat"><div class="k">覆盖学院</div><div class="v" id="sDept">0</div></div>
+            <div class="stat"><div class="k">中奖人次</div><div class="v" id="sWin">0</div></div>
+            <div class="stat"><div class="k">互动次数</div><div class="v" id="sPlay">0</div></div>
+          </div>
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head"><h2>⚡ 最新动态</h2></div>
+            <div class="feed" id="feed"></div>
+          </div>
+          <div class="card">
+            <div class="card-body" style="text-align:center">
+              <div class="qr-box"><img id="wallQr" alt="签到二维码" /></div>
+              <div style="margin-top:12px;font-size:13px;color:var(--muted)">扫码签到入口</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 签到管理 ============ -->
+    <section class="view" id="view-manage">
+      <div class="wall-layout">
+        <div class="wall-main">
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head">
+              <h2>📋 签到名单</h2>
+              <input id="search" type="text" placeholder="搜索姓名 / 学院 / 电话" style="width:220px;padding:8px 12px" />
+              <div class="spacer" style="flex:1"></div>
+              <button class="btn btn-sm" id="addBtn">➕ 手动添加</button>
+              <button class="btn btn-sm btn-gold" id="exportBtn">⬇️ 导出 Excel/CSV</button>
+              <button class="btn btn-sm btn-danger" id="clearPplBtn">🗑 清空名单</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>编号</th><th>姓名</th><th>学院/部门</th><th>电话</th><th>座位</th><th>签到时间</th><th>获奖</th><th>操作</th></tr></thead>
+                <tbody id="pplBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="side-stack">
+          <div class="card">
+            <div class="card-head"><h2>📱 签到二维码</h2></div>
+            <div class="card-body" style="text-align:center">
+              <div class="qr-box"><img id="manageQr" alt="签到二维码" /></div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted);word-break:break-all" id="qrUrl">--</div>
+              <select id="qrUrlSelect" style="margin-top:10px"></select>
+              <button class="btn btn-sm" id="copyUrlBtn" style="margin-top:10px;width:100%">📋 复制签到链接</button>
+            </div>
+          </div>
+          <div class="card" style="flex:1">
+            <div class="card-head"><h2>💡 现场引导</h2></div>
+            <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.9">
+              1️⃣ 大屏连接投影，打开本页面<br />
+              2️⃣ 同学手机扫码进入签到页并填写信息<br />
+              3️⃣ 签到成功即出现在「签到墙」<br />
+              4️⃣ 活动结束点「导出 CSV」留存数据<br />
+              <span style="color:var(--gold)">提示：确保手机与大屏在同一局域网</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 抽奖 ============ -->
+    <section class="view" id="view-lottery">
+      <div class="lottery-layout">
+        <div class="stage">
+          <div class="tier-label" id="lotTierLabel">准备抽奖</div>
+          <div class="reel" id="lotReel">就绪</div>
+          <div class="prize-label" id="lotPrizeLabel">选择奖项后点击开始</div>
+          <button class="btn btn-primary btn-lg" id="lotStart" style="margin-top:30px;min-width:220px">🎲 开 始 抽 奖</button>
+        </div>
+        <div class="lottery-controls">
+          <div class="card">
+            <div class="card-head"><h2>🎯 奖项设置</h2></div>
+            <div class="card-body">
+              <div class="chip-row" id="lotTiers"></div>
+              <div class="field" style="margin-top:14px">
+                <label>参与范围</label>
+                <select id="lotScope"><option value="all">全部已签到同学</option></select>
+              </div>
+              <div class="field">
+                <label>每轮抽取人数</label>
+                <select id="lotCount">
+                  <option>1</option><option>2</option><option>3</option><option>5</option><option>10</option>
+                </select>
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+                <input type="checkbox" id="lotUnique" checked style="width:auto" /> 已中奖者不再重复中奖
+              </label>
+            </div>
+          </div>
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head"><h2>🏆 中奖名单</h2><div class="spacer" style="flex:1"></div>
+              <button class="btn btn-sm btn-ghost" id="lotClear">清空</button></div>
+            <div class="win-list" id="winList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 盲盒 ============ -->
+    <section class="view" id="view-box">
+      <div class="card" style="height:100%;display:flex;flex-direction:column;min-height:0">
+        <div class="card-head">
+          <h2>📦 惊喜盲盒</h2>
+          <span class="hint">点击盲盒翻牌，随机开出奖品 / 惩罚 / 任务</span>
+          <div class="spacer" style="flex:1"></div>
+          <span class="badge gold" id="boxLeft">剩余 --</span>
+          <button class="btn btn-sm btn-ghost" id="boxReset">🔄 重置盲盒</button>
+        </div>
+        <div class="card-body" style="flex:1;min-height:0;display:flex;flex-direction:column">
+          <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input id="boxPlayer" type="text" list="pplList" placeholder="输入开盒人姓名（选填）" style="width:220px;padding:9px 12px" />
+            <datalist id="pplList"></datalist>
+            <span style="font-size:13px;color:var(--muted)">盲盒数量</span>
+            <select id="boxCountSel" style="width:110px;padding:9px 12px">
+              <option>12</option><option>16</option><option>9</option><option>20</option><option>24</option>
+            </select>
+          </div>
+          <div class="box-grid" id="boxGrid" style="flex:1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 惩罚转盘 ============ -->
+    <section class="view" id="view-punish">
+      <div class="lottery-layout">
+        <div class="stage">
+          <div class="wheel-wrap">
+            <div class="wheel-container">
+              <div class="wheel-pointer">🔻</div>
+              <div class="wheel" id="wheel"></div>
+              <div class="wheel-hub" id="wheelHub">开始<br />转动</div>
+            </div>
+          </div>
+          <div style="text-align:center;min-height:56px">
+            <div style="color:var(--muted);font-size:13px">转动结果</div>
+            <div class="reel" id="punishResult" style="font-size:clamp(26px,4vw,44px);letter-spacing:2px">--</div>
+          </div>
+        </div>
+        <div class="lottery-controls">
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head"><h2>😈 惩罚项目</h2><div class="spacer" style="flex:1"></div>
+              <button class="btn btn-sm btn-ghost" id="punishClear">清空记录</button></div>
+            <div class="card-body">
+              <div class="chip-row" id="punishList"></div>
+            </div>
+            <div class="card-head" style="border-top:1px solid var(--panel-brd)"><h2>📜 转动记录</h2></div>
+            <div class="win-list" id="punishHistory" style="padding:14px 18px"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 互动游戏 ============ -->
+    <section class="view" id="view-games">
+      <div class="games-grid">
+        <!-- 数字炸弹 -->
+        <div class="card">
+          <div class="card-head"><h2>💣 数字炸弹</h2><span class="hint">猜中炸弹数字即“爆炸”</span></div>
+          <div class="card-body bomb-display" style="flex:1;justify-content:center;text-align:center">
+            <div class="bomb-range" id="bombRange">1 ~ 100</div>
+            <div style="font-size:13px;color:var(--dim);margin-top:8px" id="bombHint">点击下方“开始新一局”生成炸弹</div>
+            <div class="bomb-guesses" id="bombGuesses"></div>
+          </div>
+          <div class="card-body" style="border-top:1px solid var(--panel-brd);display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" id="bombNew">🎲 开始新一局</button>
+            <input id="bombInput" type="number" placeholder="猜数字" style="width:110px;padding:9px 12px" />
+            <button class="btn btn-sm" id="bombGuess">猜！</button>
+          </div>
+        </div>
+
+        <!-- 知识抢答 / 随机抽人 -->
+        <div class="card">
+          <div class="card-head"><h2>🧠 知识抢答 & 随机点名</h2></div>
+          <div class="card-body" style="flex:1">
+            <div class="quiz-q" id="quizQ">点击“随机出题”开始知识问答</div>
+            <div class="quiz-a hidden" id="quizA">答案</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:auto;padding-top:16px">
+              <button class="btn btn-primary btn-sm" id="quizNext">🎯 随机出题</button>
+              <button class="btn btn-gold btn-sm" id="quizReveal">👀 显示/隐藏答案</button>
+            </div>
+            <div style="border-top:1px solid var(--panel-brd);margin-top:16px;padding-top:16px;text-align:center">
+              <div style="color:var(--muted);font-size:13px;margin-bottom:8px">🎤 随机点名上台</div>
+              <div class="reel" id="pickResult" style="font-size:clamp(24px,3vw,38px)">--</div>
+              <button class="btn btn-sm" id="pickBtn" style="margin-top:12px">🎰 随机抽人</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 积分排行榜 -->
+        <div class="card">
+          <div class="card-head"><h2>🏅 抢答积分榜</h2><div class="spacer" style="flex:1"></div>
+            <button class="btn btn-sm btn-ghost" id="scoreReset">清零</button></div>
+          <div class="card-body" style="flex:1;min-height:0">
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <input id="scoreName" list="pplList" placeholder="选择/输入同学姓名" autocomplete="off" />
+              <button class="btn btn-sm btn-primary" id="scoreAdd">+1</button>
+            </div>
+            <div class="chip-row" style="margin-bottom:12px">
+              <span class="chip" data-sd="2">+2 分</span>
+              <span class="chip" data-sd="5">+5 分</span>
+              <span class="chip" data-sd="10">+10 分</span>
+              <span class="chip" data-sd="-1">-1 分</span>
+            </div>
+            <div class="scroll" id="rankList" style="flex:1;min-height:110px"></div>
+          </div>
+        </div>
+
+        <!-- 你演我猜 -->
+        <div class="card">
+          <div class="card-head"><h2>🎬 你演我猜</h2><div class="spacer" style="flex:1"></div>
+            <span class="badge green" id="charScore">得分 0 · 跳过 0</span></div>
+          <div class="card-body" style="flex:1;justify-content:center;gap:14px">
+            <div class="word-card" id="charWord">点击开始</div>
+            <div class="timer-bar"><div class="timer-fill" id="charTimer"></div></div>
+            <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+              <button class="btn btn-primary btn-sm" id="charStart">▶ 开始（60s）</button>
+              <button class="btn btn-gold btn-sm" id="charHit">✅ 猜对 +1</button>
+              <button class="btn btn-sm" id="charSkip">⏭ 跳过</button>
+            </div>
+            <div style="text-align:center;color:var(--dim);font-size:13px" id="charHint">准备就绪，点击“开始”</div>
+          </div>
+        </div>
+
+        <!-- 随机分组器 -->
+        <div class="card">
+          <div class="card-head"><h2>🎲 随机分组器</h2><div class="spacer" style="flex:1"></div>
+            <select id="teamCount" style="width:88px;padding:7px 10px">
+              <option>2</option><option>3</option><option selected>4</option><option>5</option><option>6</option>
+            </select>
+            <button class="btn btn-sm btn-primary" id="teamSplit">分组</button></div>
+          <div class="card-body scroll" id="teamResult" style="flex:1;min-height:0">
+            <div class="empty"><span class="big">👥</span>点击“分组”把已签到同学随机分为若干小组</div>
+          </div>
+        </div>
+
+        <!-- 涂鸦板 -->
+        <div class="card" style="grid-column:1 / -1">
+          <div class="card-head"><h2>🎨 你画我猜 · 大屏涂鸦板</h2><span class="hint">一人上台作画，台下抢答</span></div>
+          <div class="card-body" style="flex:1;min-height:0">
+            <div class="board-tools" id="boardTools"><span style="font-size:13px;color:var(--muted)">颜色</span></div>
+            <div class="board-wrap"><canvas id="board"></canvas></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 弹幕墙 ============ -->
+    <section class="view" id="view-danmu">
+      <div class="danmu-layout">
+        <div class="card danmu-stage">
+          <div class="card-head">
+            <h2>💬 弹幕互动墙</h2>
+            <span class="hint">同学手机发弹幕，实时飞过屏幕</span>
+            <div class="spacer" style="flex:1"></div>
+            <span class="badge cyan" id="danmuCount">已收 0 条</span>
+          </div>
+          <div class="danmu-canvas" id="danmuCanvas">
+            <div class="danmu-empty" id="danmuEmpty">等待同学发送弹幕…（右侧扫码进入）</div>
+          </div>
+        </div>
+        <div class="side-stack">
+          <div class="card">
+            <div class="card-head"><h2>📱 弹幕入口</h2></div>
+            <div class="card-body" style="text-align:center">
+              <div class="qr-box"><img id="danmuQr" alt="弹幕二维码" /></div>
+              <div style="margin-top:12px;font-size:12px;color:var(--muted);word-break:break-all" id="danmuUrl">--</div>
+              <select id="danmuUrlSelect" style="margin-top:10px"></select>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>🛠 控制台</h2></div>
+            <div class="card-body">
+              <div class="field"><label>滚动速度</label>
+                <select id="danmuSpeed">
+                  <option value="110">悠然</option>
+                  <option value="200" selected>正常</option>
+                  <option value="330">飞快</option>
+                </select></div>
+              <div class="field"><label>发送测试弹幕</label>
+                <div style="display:flex;gap:8px">
+                  <input id="danmuTest" placeholder="输入内容" maxlength="60" />
+                  <button class="btn btn-sm btn-primary" id="danmuSend">发送</button>
+                </div></div>
+              <button class="btn btn-sm btn-danger" id="danmuClear" style="width:100%">🧹 清屏</button>
+            </div>
+          </div>
+          <div class="card" style="flex:1">
+            <div class="card-head"><h2>💡 玩法建议</h2></div>
+            <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.9">
+              · 暖场时让同学发送「入场祝福」<br />
+              · 抽奖前刷屏「我要中奖」<br />
+              · 活动尾声收集「一句话告白 / 心愿」<br />
+              <span style="color:var(--gold)">弹幕不进入签到数据，纯现场互动</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 数据统计 ============ -->
+    <section class="view" id="view-stats">
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px;height:100%">
+        <div class="card" style="display:flex;flex-direction:column;min-height:0">
+          <div class="card-head"><h2>📊 各学院签到分布</h2></div>
+          <div class="card-body scroll" style="flex:1;min-height:0" id="deptChart"></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:18px;min-height:0">
+          <div class="stat-row" style="grid-template-columns:1fr 1fr">
+            <div class="stat accent"><div class="k">总签到</div><div class="v" id="stTotal">0</div></div>
+            <div class="stat"><div class="k">学院数</div><div class="v" id="stDept">0</div></div>
+            <div class="stat"><div class="k">中奖人次</div><div class="v" id="stWin">0</div></div>
+            <div class="stat"><div class="k">盲盒开启</div><div class="v" id="stBox">0</div></div>
+          </div>
+          <div class="card" style="flex:1;display:flex;flex-direction:column;min-height:0">
+            <div class="card-head"><h2>🏅 奖项发放统计</h2></div>
+            <div class="card-body scroll" id="prizeChart" style="flex:1;min-height:0"></div>
+          </div>
+          <button class="btn btn-gold btn-lg" id="statsExport">⬇️ 导出完整签到数据（CSV）</button>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 手动添加弹窗 -->
+<div class="modal-mask" id="addMask">
+  <div class="card modal">
+    <div class="card-head"><h2>➕ 手动添加签到</h2><div class="spacer" style="flex:1"></div><button class="btn btn-sm btn-ghost" id="addClose">关闭</button></div>
+    <div class="card-body">
+      <div class="field"><label>姓名 *</label><input id="addName" placeholder="姓名" /></div>
+      <div class="field"><label>学院 / 部门</label><input id="addDept" placeholder="如 计算机学院" /></div>
+      <div class="field"><label>电话</label><input id="addPhone" placeholder="选填" /></div>
+      <div class="field"><label>座位号</label><input id="addSeat" placeholder="选填" /></div>
+      <button class="btn btn-primary" id="addSubmit" style="width:100%">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 设置弹窗 -->
+<div class="modal-mask" id="setMask">
+  <div class="card modal" style="max-width:640px">
+    <div class="card-head"><h2>⚙️ 活动设置</h2><div class="spacer" style="flex:1"></div><button class="btn btn-sm btn-ghost" id="setClose">关闭</button></div>
+    <div class="card-body">
+      <div class="field"><label>大屏标题</label><input id="setTitle" /></div>
+      <div class="field"><label>副标题 / 标语</label><input id="setSubtitle" /></div>
+      <div class="field"><label>奖品列表（每行一条，格式：等级 | 奖品名称 | 数量）</label>
+        <textarea id="setPrizes" rows="5"></textarea></div>
+      <div class="field"><label>惩罚项目（每行一条）</label>
+        <textarea id="setPenalties" rows="4"></textarea></div>
+      <div class="field"><label>盲盒奖池（每行一条，格式：prize/penalty/task/empty | 内容）</label>
+        <textarea id="setBox" rows="6"></textarea></div>
+      <div class="field"><label>抢答题库（每行一条，格式：题目 | 答案）</label>
+        <textarea id="setQuiz" rows="4"></textarea></div>
+      <div class="field"><label>你演我猜·词卡（每行一条）</label>
+        <textarea id="setWords" rows="4"></textarea></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" id="setSave" style="flex:1">保存设置</button>
+        <button class="btn btn-danger" id="resetAll">⚠️ 重置全部数据</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

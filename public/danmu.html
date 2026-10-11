@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#08080c" />
+<title>新生见面会 · 弹幕上墙</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body class="checkin">
+<div class="aurora"></div>
+<div class="grid-overlay"></div>
+<canvas id="confetti"></canvas>
+
+<div class="checkin-wrap">
+  <div class="hero">
+    <div class="logo-big">💬</div>
+    <h1>弹幕上墙</h1>
+    <p>你的留言会实时飞过见面会大屏</p>
+    <div class="tagline">刷 起 来 · 让 全 场 看 见 你</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>✍️ 发送弹幕</h2>
+      <span class="hint" id="sentCount">已发送 0 条</span>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>你的昵称（选填）</label>
+        <input id="name" type="text" placeholder="不填则显示为「匿名同学」" maxlength="12" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>弹幕内容</label>
+        <textarea id="text" rows="2" placeholder="想说点什么？最多 60 字" maxlength="60"></textarea>
+      </div>
+      <button class="btn btn-primary btn-lg" id="sendBtn" style="width:100%">🚀 发 送 上 墙</button>
+      <div style="font-size:12px;color:var(--dim);text-align:center;margin-top:10px">可连续发送多条，文明弹幕哦～</div>
+
+      <div class="field" style="margin-top:18px">
+        <label>一键快捷短语</label>
+        <div class="dept-quick" id="quick"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>📜 我发过的弹幕</h2></div>
+    <div class="card-body" id="mine" style="font-size:14px">
+      <div class="empty" style="padding:20px">还没有发送记录</div>
+    </div>
+  </div>
+
+  <div class="foot-note">
+    校团委社会实践部 · 新生见面会系统<br />
+    弹幕内容不进入签到数据，仅用于现场互动
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const QUICK = ['社实冲鸭！', '我要中奖！', '新生报到，请多关照', '青春正当时', '主持人好帅', '社实最棒！', '来啦来啦', '冲！冲！冲！'];
+
+QUICK.forEach((q) => {
+  const c = document.createElement('div');
+  c.className = 'chip'; c.textContent = q;
+  c.onclick = () => { $('text').value = q; $('text').focus(); };
+  $('quick').appendChild(c);
+});
+
+let sent = 0;
+const mineList = [];
+function renderMine() {
+  $('mine').innerHTML = mineList.length
+    ? mineList.map((m) => `<div style="padding:9px 0;border-bottom:1px solid var(--panel-brd)">
+        <span style="color:var(--red-soft);font-weight:700">${esc(m.name)}</span>
+        <span style="margin-left:8px">${esc(m.text)}</span>
+        <span style="float:right;color:var(--dim);font-size:12px">${m.time}</span></div>`).join('')
+    : '<div class="empty" style="padding:20px">还没有发送记录</div>';
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+const btn = $('sendBtn');
+btn.onclick = async () => {
+  const text = $('text').value.trim();
+  if (!text) { $('text').focus(); return toast('请输入弹幕内容'); }
+  btn.disabled = true; btn.textContent = '发送中…';
+  try {
+    const res = await fetch('/api/danmu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, name: $('name').value.trim() }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || '发送失败');
+    sent++;
+    $('sentCount').textContent = '已发送 ' + sent + ' 条';
+    const d = new Date();
+    const p = (n) => String(n).padStart(2, '0');
+    mineList.unshift({ name: data.danmu.name, text: data.danmu.text, time: `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` });
+    if (mineList.length > 30) mineList.pop();
+    renderMine();
+    $('text').value = '';
+    confettiBurst(40);
+    toast('已上墙！看大屏 🎉');
+  } catch (e) {
+    toast('发送失败：' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '🚀 发 送 上 墙';
+  }
+};
+$('text').addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) btn.click(); });
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.style.cssText = 'position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:99;text-align:center';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.classList.add('fade'); setTimeout(() => t.remove(), 400); }, 1700);
+}
+
+/* 小彩带 */
+const cv = document.getElementById('confetti'), cx = cv.getContext('2d');
+let parts = [], raf = null;
+function sizeCv() { cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', sizeCv); sizeCv();
+function confettiBurst(y) {
+  const colors = ['#ff2d4b', '#ff7a18', '#ffcf3f', '#22d3ee', '#a855f7', '#34d399'];
+  for (let i = 0; i < 70; i++) {
+    parts.push({ x: innerWidth / 2 + (Math.random() - .5) * 160, y: y || innerHeight * 0.6,
+      vx: (Math.random() - .5) * 10, vy: Math.random() * -11 - 2,
+      s: Math.random() * 7 + 4, c: colors[(Math.random() * colors.length) | 0],
+      r: Math.random() * Math.PI, vr: (Math.random() - .5) * .3, life: 110 });
+  }
+  if (!raf) loop();
+}
+function loop() {
+  cx.clearRect(0, 0, cv.width, cv.height);
+  parts.forEach((p) => {
+    p.vy += 0.4; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life--;
+    cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+    cx.globalAlpha = Math.max(0, p.life / 110); cx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); cx.restore();
+  });
+  parts = parts.filter((p) => p.life > 0 && p.y < cv.height + 40);
+  if (parts.length) raf = requestAnimationFrame(loop); else { raf = null; cx.clearRect(0, 0, cv.width, cv.height); }
+}
+</script>
+</body>
+</html>

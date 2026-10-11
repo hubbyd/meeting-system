@@ -1,0 +1,13 @@
+{
+  "name": "tuanwei-social-practice-meetup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "校团委社会实践部新生见面会系统：扫码签到 / 抽奖 / 盲盒 / 惩罚转盘 / 互动游戏 / 数据导出",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}
